@@ -29,8 +29,7 @@ volatile uint8_t keys[NUM_KEYS] = {KEY_IDLE};
 void timerCallback(void)
 {
   for (uint8_t i = 0; i < NUM_KEYS; i++) {
-    if (keys[i] < KEY_IDLE - 1)
-      keys[i]++;
+    if (keys[i] < KEY_IDLE - 1) keys[i]++;
   }
 }
 
@@ -40,11 +39,11 @@ void main(void)
   KEY_ROW_2 = 0x00;
 
   ADC080XInit();
-  midiInit(true);
-  timerInit(1000);
+  midiInit();
+  timerInit();
   sei();
 
-  __bit portamentoState = 0;
+  __bit portamentoIsActive = 0;
 
   uint8_t octave   = 3;
   int8_t transpose = 0;
@@ -57,47 +56,37 @@ void main(void)
 
     if (ADC080XReady() && adcResult != prevAdcResult[adcChannel]) {
       prevAdcResult[adcChannel] = adcResult;
-      if (adcResult < 2) adcResult = 0;
-      uint16_t ccValue = toRange((uint8_t)adcResult, 0, 255, 0, 127);
-      if (adcChannel == PITCH_BEND_WHEEL) {
-        ccValue = (125 < adcResult && adcResult < 129)
-                      ? MIDI_PITCH_BEND_CENTER
-                      : toRange((uint8_t)adcResult, 0, 255, 0, 0x3FFF);
-      }
 
-      switch (adcChannel) {
-        case MOD_WHEEL:
-          sendMidi(MIDI_CC, MIDI_CH1, MIDI_CC_MOD_WHEEL, ccValue);
-          break;
-        case PITCH_BEND_WHEEL:
-          sendMidi(MIDI_PITCH_BEND, MIDI_CH1, ccValue & 0x7F, ccValue >> 7);
-          break;
-        case PORTAMENTO:
-          if (ccValue == 0 && portamentoState == 1) {
-            sendMidi(MIDI_CC, MIDI_CH1, MIDI_CC_PORTAMENTO, 0);
-          } else if (ccValue > 0 && portamentoState == 0) {
-            sendMidi(MIDI_CC, MIDI_CH1, MIDI_CC_PORTAMENTO, 127);
-          }
-          portamentoState = (__bit)ccValue;
-          sendMidi(MIDI_CC, MIDI_CH1, MIDI_CC_PORTAMENTO_TIME, ccValue);
-          break;
-        default:
-          break;
+      if (adcResult < 2) adcResult = 0;
+
+      uint16_t ccValue = toRange(adcResult, 255, 127);
+
+      if (adcChannel == MOD_WHEEL) {
+        sendMidi(MIDI_CC, MIDI_CH1, MIDI_CC_MOD_WHEEL, ccValue);
+      } else if (adcChannel == PITCH_BEND_WHEEL) {
+        if (125 < adcResult && adcResult < 129) {
+          ccValue = MIDI_PITCH_BEND_CENTER;
+        } else {
+          ccValue = toRange(adcResult, 255, 0x3FFF);
+        }
+        sendMidi(MIDI_PITCH_BEND, MIDI_CH1, ccValue & 0x7F, ccValue >> 7);
+      } else if (adcChannel == PORTAMENTO) {
+        if ((__bit)ccValue != portamentoIsActive) {
+          sendMidi(MIDI_CC, MIDI_CH1, MIDI_CC_PORTAMENTO, (__bit)ccValue * 127);
+        }
+        portamentoIsActive = ccValue;
+        sendMidi(MIDI_CC, MIDI_CH1, MIDI_CC_PORTAMENTO_TIME, ccValue);
       }
     }
     if (ADC080XReady()) adcChannel = ++adcChannel % 3;
 
     if (loadButtons()) {
-      if (readButtonEdge(KEY_HOLD, FALLING) && readButton(SUSTAIN_PEDAL) == 1) {
-        sendMidi(MIDI_CC, MIDI_CH1, 64, 127);
-      } else if (readButtonEdge(KEY_HOLD, RISING) && readButton(SUSTAIN_PEDAL) == 1) {
-        sendMidi(MIDI_CC, MIDI_CH1, 64, 0);
+      if (readButtonEdge(KEY_HOLD, CHANGE) && readButton(SUSTAIN_PEDAL) == 1) {
+        sendMidi(MIDI_CC, MIDI_CH1, 64, readButton(KEY_HOLD) * 127);
       }
 
-      if (readButtonEdge(SUSTAIN_PEDAL, FALLING) && readButton(KEY_HOLD) == 1) {
-        sendMidi(MIDI_CC, MIDI_CH1, 64, 127);
-      } else if (readButtonEdge(SUSTAIN_PEDAL, RISING) && readButton(KEY_HOLD) == 1) {
-        sendMidi(MIDI_CC, MIDI_CH1, 64, 0);
+      if (readButtonEdge(SUSTAIN_PEDAL, CHANGE) && readButton(KEY_HOLD) == 1) {
+        sendMidi(MIDI_CC, MIDI_CH1, 64, readButton(SUSTAIN_PEDAL) * 127);
       }
 
       if (readButtonEdge(OCTAVE_UP, FALLING)) {
@@ -134,7 +123,7 @@ void main(void)
 
         KEY_SET_PRESSED(*key, offset);
       } else if ((keyTrigger1 == 0 || keyTrigger0 == 0) && KEY_IS_PRESSED(*key)) {
-        uint8_t note = i + getKeyOffset(*key);
+        uint8_t note = i + KEY_GET_OFFSET(*key);
 
         sendMidi(MIDI_NOTEOFF, MIDI_CH1, note, 0);
 

@@ -3,7 +3,7 @@
 #include "include/math.h"
 #include "include/defs.h"
 
-__code const uint8_t velocityCurve[256] = {
+__code const uint8_t velocityCurve[] = {
     127,
     127,
     127,
@@ -147,148 +147,25 @@ __code const uint8_t velocityCurve[256] = {
     36,
     36,
     36,
-    36,
-    35,
-    35,
-    35,
-    35,
-    35,
-    35,
-    35,
-    35,
-    35,
-    34,
-    34,
-    34,
-    34,
-    34,
-    34,
-    34,
-    34,
-    34,
-    34,
-    34,
-    33,
-    33,
-    33,
-    33,
-    33,
-    33,
-    33,
-    33,
-    33,
-    33,
-    33,
-    33,
-    33,
-    33,
-    32,
-    32,
-    32,
-    32,
-    32,
-    32,
-    32,
-    32,
-    32,
-    32,
-    32,
-    32,
-    32,
-    32,
-    32,
-    32,
-    32,
-    32,
-    32,
-    32,
-    32,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    31,
-    30,
-    30,
-    30,
-    30,
-    30,
-    30,
-    30,
-    30,
-    30,
-    30,
-    30,
-    30,
-    30,
-    30,
-    30,
-    30,
-    30,
-    30,
-    30,
-    30,
-    30,
-    30,
     30,
 };
 
-void midiInit(__bit turnAllNotesOff)
+void midiInit(void)
 {
-    serialInit(31250);
-
-    if (!turnAllNotesOff) return;
-
-    for (uint8_t i = 0; i < 16; i++) {
-        for (uint8_t j = 0; j < 127; j++) {
-            sendMidi(MIDI_NOTEOFF, i, j, 0);
-        }
-    }
+  serialInit(31250);
 }
 
 void sendMidi(uint8_t messageType, uint8_t channel, uint8_t byte1, uint8_t byte2)
 {
-    serialWriteChar(messageType << 4 | channel);
-    serialWriteChar(clamp(byte1, 0, 127));
+  serialWriteChar(messageType << 4 | channel);
 
-    switch (messageType) {
-        case MIDI_NOTEON:
-            serialWriteChar(velocityCurve[byte2]);
-            break;
-        case MIDI_NOTEOFF:
-            serialWriteChar(0x00);
-            break;
-        default:
-            serialWriteChar(clamp(byte2, 0, 127));
-            break;
-    }
+  if (byte1 > 127) byte1 = 127;
+  serialWriteChar(byte1);
+
+  if (messageType == MIDI_NOTEON) {
+    serialWriteChar((byte2 < 144) ? velocityCurve[byte2] : 30);
+  } else {
+    if (byte2 > 127) byte2 = 127;
+    serialWriteChar(byte2);
+  }
 }

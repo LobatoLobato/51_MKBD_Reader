@@ -18,8 +18,9 @@
 #define BUTTONS_CH7       7
 
 enum BUTTON_EDGE {
-    FALLING = 0,
-    RISING  = 1,
+  FALLING = 1,
+  RISING  = 2,
+  CHANGE  = 3,
 };
 
 __bit loadButtons(void);

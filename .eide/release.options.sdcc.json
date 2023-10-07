@@ -4,10 +4,8 @@
     "afterBuildTasks": [],
     "global": {
         "device": "mcs51",
-        "optimize-type": "size",
-        "plain-char-is-signed": true,
-        "peep-asm": true,
-        "peep-return": true
+        "optimize-type": "speed",
+        "plain-char-is-signed": true
     },
     "c/cpp-compiler": {
         "language-c": "c99"
