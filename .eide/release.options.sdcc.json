@@ -1,0 +1,20 @@
+{
+    "version": 3,
+    "beforeBuildTasks": [],
+    "afterBuildTasks": [],
+    "global": {
+        "device": "mcs51",
+        "optimize-type": "size",
+        "plain-char-is-signed": true,
+        "peep-asm": true,
+        "peep-return": true
+    },
+    "c/cpp-compiler": {
+        "language-c": "c99"
+    },
+    "asm-compiler": {},
+    "linker": {
+        "$mainFileName": "main",
+        "output-format": "hex"
+    }
+}
