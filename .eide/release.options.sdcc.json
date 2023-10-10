@@ -5,7 +5,9 @@
     "global": {
         "device": "mcs51",
         "optimize-type": "speed",
-        "plain-char-is-signed": true
+        "plain-char-is-signed": true,
+        "noinit-xram-from-code": true,
+        "misc-controls": "--code-size 4096 --iram-size 256"
     },
     "c/cpp-compiler": {
         "language-c": "c99"
